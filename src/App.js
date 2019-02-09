@@ -55,7 +55,7 @@ class App extends Component {
   };
 
   render() {
-    const { path, organization } = this.state; 
+    const { path, organization, errors } = this.state; 
 
     return (
       <div>
@@ -77,19 +77,35 @@ class App extends Component {
 
         <hr />
 
-        <Organization organization={organization} />
+        {organization ? (
+          <Organization organization={organization} />
+        ) : (
+          <p>No information yet ...</p>
+        )}
+        
       </div>
     );
   }
 }
 
-const Organization = ({organization }) => (
-  <div>
-    <p>
-      <strong>Issues from Organization:</strong>
-      <a href={organization.url}>{organization.name}</a>
-    </p>
-  </div>
-)
+const Organization = ({organization, errors }) => {
+  if (errors) {
+    return (
+      <p>
+        <strong>Something went wrong:</strong>
+        {errors.map(error => error.message).join(' ')}
+      </p>
+    );
+  }
+
+  return(
+    <div>
+      <p>
+        <strong>Issues from Organization:</strong>
+        <a href={organization.url}>{organization.name}</a>
+      </p>
+    </div>
+  );
+};
 
 export default App;
