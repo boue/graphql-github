@@ -13,7 +13,27 @@ const axiosGitHubGraphQL = axios.create({
 const TITLE = 'React GraphQL Github Client';
 
 class App extends Component {
+  state = {
+    path: 'the-road-to-learn-react/the-road-to-learn-react',
+  };
+
+  componentDidMount() {
+    //fetch data
+  }
+
+  onChange = event => {
+    this.setState({ path: event.target.value });
+  };
+
+  onSubmit = event => {
+    //fetch data
+
+    event.preventDefault();
+  };
+
   render() {
+    const { path } = this.state; 
+
     return (
       <div>
         <h1>{TITLE}</h1>
@@ -25,6 +45,7 @@ class App extends Component {
           <input 
             id="url"
             type="text"
+            value={path}
             onChange={this.onChange}
             style={{ width: '300px' }}
           />
