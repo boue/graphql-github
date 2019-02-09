@@ -11,11 +11,24 @@ const axiosGitHubGraphQL = axios.create({
 });
 
 //queries
-const GET_ORGANIZATION = `
+const GET_ISSUES_OF_REPOSITORY = `
   {
     organization(login: "the-road-to-learn-react") {
       name 
       url
+      repository(name: "the-road-to-learn-react") {
+        name
+        url
+        issues(last: 5) {
+          edges {
+            node {
+              id
+              title
+              url
+            }
+          }
+        }
+      }
     }
   }
 `;
@@ -45,7 +58,7 @@ class App extends Component {
 
   onFetchFromGitHub = () => {
     axiosGitHubGraphQL
-      .post('', { query: GET_ORGANIZATION })
+      .post('', { query: GET_ISSUES_OF_REPOSITORY })
       .then(result => 
         this.setState(() => ({
           organization: result.data.data.organization,
@@ -104,8 +117,26 @@ const Organization = ({organization, errors }) => {
         <strong>Issues from Organization:</strong>
         <a href={organization.url}>{organization.name}</a>
       </p>
+      <Repository repository={organization.repository} />
     </div>
   );
 };
+
+const Repository = ({ repository }) => (
+  <div>
+    <p>
+      <strong>In Repository:</strong>
+      <a href={repository.url}>{repository.name}</a>
+    </p>
+
+    <ul>
+      {repository.issues.edges.map(issue => (
+        <li key={issue.node.id}>
+          <a href={issue.node.url}>{issue.node.title}</a>
+        </li>
+      ))}
+    </ul>
+  </div>
+);
 
 export default App;
