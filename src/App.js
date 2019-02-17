@@ -11,6 +11,17 @@ const axiosGitHubGraphQL = axios.create({
   }
 });
 
+//mutation to add a star to a github repo
+const ADD_STAR = `
+  mutation ($repositoryId: ID!) {
+    addStar(input:{starrableId:$repositoryId}) {
+      starrable {
+        viewerHasStarred
+      }
+    }
+  }
+`;
+
 //querie that accepts two variables
 //https://stackoverflow.com/questions/42622912/in-graphql-whats-the-meaning-of-edges-and-node
 const GET_ISSUES_OF_REPOSITORY = `
@@ -22,6 +33,9 @@ const GET_ISSUES_OF_REPOSITORY = `
         id
         name
         url
+        stargazers {
+          totalCount
+        }
         viewerHasStarred
         issues(first: 5, after: $cursor, states: [OPEN]) {
           edges {
@@ -61,6 +75,26 @@ const getIssuesOfRepository = (path, cursor) => {
   });
 };
 
+const resolveAddStarMutation = mutationResult => state => {
+  const { viewerHasStarred } = mutationResult.data.data.addStar.starrable;
+
+  const { totalCount } = state.organization.repository.stargazers;
+
+  return {
+    ...state,
+    organization: {
+      ...state.organization,
+      repository: {
+        ...state.organization.repository,
+        viewerHasStarred,
+        stargazers: {
+          totalCount: totalCount + 1
+        }
+      }
+    }
+  };
+};
+
 //pass the cursor to determine whether initial query
 //or query to fetch another page of iessues
 const resolveIssuesQuery = (queryResult, cursor) => state => {
@@ -97,6 +131,13 @@ const resolveIssuesQuery = (queryResult, cursor) => state => {
 
 const TITLE = "React GraphQL Github Client";
 
+const addStarToRepository = repositoryId => {
+  return axiosGitHubGraphQL.post("", {
+    query: ADD_STAR,
+    variables: { repositoryId }
+  });
+};
+
 class App extends Component {
   state = {
     path: "the-road-to-learn-react/the-road-to-learn-react",
@@ -111,6 +152,12 @@ class App extends Component {
 
   onChange = event => {
     this.setState({ path: event.target.value });
+  };
+
+  onStarRepository = (repositoryId, viewerHasStarred) => {
+    addStarToRepository(repositoryId).then(mutationResult =>
+      this.setState(resolveAddStarMutation(mutationResult))
+    );
   };
 
   //2nd spot where we need to fetch state
@@ -132,6 +179,8 @@ class App extends Component {
 
     this.onFetchFromGitHub(this.state.path, endCursor);
   };
+
+  onStarRepository = (repositoryId, viewerHasStarred) => {};
 
   render() {
     const { path, organization, errors } = this.state;
@@ -159,6 +208,7 @@ class App extends Component {
             organization={organization}
             errors={errors}
             onFetchMoreIssues={this.onFetchMoreIssues}
+            onStarRepository={this.onStarRepository}
           />
         ) : (
           <p>No information yet ...</p>
@@ -168,7 +218,12 @@ class App extends Component {
   }
 }
 
-const Organization = ({ organization, errors, onFetchMoreIssues }) => {
+const Organization = ({
+  organization,
+  errors,
+  onFetchMoreIssues,
+  onStarRepository
+}) => {
   if (errors) {
     return (
       <p>
@@ -187,6 +242,7 @@ const Organization = ({ organization, errors, onFetchMoreIssues }) => {
       <Repository
         repository={organization.repository}
         onFetchMoreIssues={onFetchMoreIssues}
+        onStarRepository={onStarRepository}
       />
     </div>
   );
@@ -198,6 +254,16 @@ const Repository = ({ repository, onFetchMoreIssues, onStarRepository }) => (
       <strong>In Repository:</strong>
       <a href={repository.url}>{repository.name}</a>
     </p>
+
+    <button
+      type="button"
+      onClick={() =>
+        onStarRepository(repository.id, repository.viewerHasStarred)
+      }
+    >
+      {repository.stargazers.totalCount}
+      {repository.viewerHasStarred ? " Unstar" : " Star"}
+    </button>
 
     <ul>
       {repository.issues.edges.map(issue => (
@@ -211,11 +277,10 @@ const Repository = ({ repository, onFetchMoreIssues, onStarRepository }) => (
           </ul>
         </li>
       ))}
-      <button type="button" onClick={() => onStarRepository()}>
-        {repository.viewerHasStarred ? "Unstar" : "Star"}
-      </button>
     </ul>
+
     <hr />
+
     {repository.issues.pageInfo.hasNextPage && (
       <button onClick={onFetchMoreIssues}>More</button>
     )}
