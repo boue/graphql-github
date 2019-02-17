@@ -12,14 +12,17 @@ const axiosGitHubGraphQL = axios.create({
 });
 
 //querie that accepts two variables
+//https://stackoverflow.com/questions/42622912/in-graphql-whats-the-meaning-of-edges-and-node
 const GET_ISSUES_OF_REPOSITORY = `
   query ($organization: String!, $repository: String!, $cursor: String) {
     organization(login: $organization) {
       name
       url
       repository(name: $repository) {
+        id
         name
         url
+        viewerHasStarred
         issues(first: 5, after: $cursor, states: [OPEN]) {
           edges {
             node {
@@ -189,7 +192,7 @@ const Organization = ({ organization, errors, onFetchMoreIssues }) => {
   );
 };
 
-const Repository = ({ repository, onFetchMoreIssues }) => (
+const Repository = ({ repository, onFetchMoreIssues, onStarRepository }) => (
   <div>
     <p>
       <strong>In Repository:</strong>
@@ -208,6 +211,9 @@ const Repository = ({ repository, onFetchMoreIssues }) => (
           </ul>
         </li>
       ))}
+      <button type="button" onClick={() => onStarRepository()}>
+        {repository.viewerHasStarred ? "Unstar" : "Star"}
+      </button>
     </ul>
     <hr />
     {repository.issues.pageInfo.hasNextPage && (
